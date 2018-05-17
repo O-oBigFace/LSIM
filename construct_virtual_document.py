@@ -6,22 +6,25 @@ from urllib import parse
 import segmentation as seg
 import time
 import json
+import serverCONFIG as scg
 
 # config
-repository_agraph = 'zhwiki'
-host_agraph = "localhost"
-port_agraph = 10035
-user_agraph = 'john'
-password_agraph = '123'
+repository_agraph = scg.repository_agraph
+host_agraph = scg.host_agraph
+port_agraph = scg.port_agraph
+user_agraph = scg.user_agraph
+password_agraph = scg.password_agraph
 
 
-db_mysql = "zhishi"
-host_mysql = '223.3.78.254'
-port_mysql = 3306
-user_mysql = 'xyk'
-password_mysql = "123"
-table_virtual_document = 'vd_zhwiki'
-sql_insert = """insert into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """.format(table=table_virtual_document)
+db_mysql = scg.db_mysql
+host_mysql = scg.host_mysql
+port_mysql = scg.port_mysql
+user_mysql = scg.user_mysql
+password_mysql =scg.password_mysql
+table_entity = scg.table_entity
+
+
+sql_insert = """insert into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """.format(table=table_entity)
 
 
 weight_of_subject = 3.1
