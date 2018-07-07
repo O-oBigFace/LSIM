@@ -7,6 +7,8 @@ import segmentation as seg
 import time
 import json
 import serverCONFIG as scg
+from multiprocessing import Process
+
 
 # config
 repository_agraph = scg.repository_agraph
@@ -21,17 +23,16 @@ host_mysql = scg.host_mysql
 port_mysql = scg.port_mysql
 user_mysql = scg.user_mysql
 password_mysql =scg.password_mysql
+table_vd = scg.table_vd
+table_nv = scg.table_vd
 table_entity = scg.table_entity
+table_subject = scg.table_subject
 
 
-sql_insert = """insert into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """.format(table=table_entity)
-
+sql_insert = """insert into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """.format(table=table_vd)
 
 weight_of_subject = 3.1
 weight_of_category = 2.1
-
-number_of_triples = 15349786
-
 
 # connect to Allegrograph
 server = AllegroGraphServer(host=host_agraph, port=port_agraph, user=user_agraph, password=password_agraph)
@@ -40,101 +41,153 @@ graph = catalog.getRepository(repository_agraph, Repository.ACCESS)
 graph.initialize()
 conn_graph = graph.getConnection()
 
-# connect to mysql
-conn_db = pymysql.connect(host=host_mysql, port=port_mysql, user=user_mysql, password=password_mysql, db=db_mysql)
 
+def construct(id_lowerbound, id_upperbound, batch=150):
+    # connect to mysql
+    conn_db = pymysql.connect(host=host_mysql, port=port_mysql, user=user_mysql, password=password_mysql, db=db_mysql)
+    """
+    对mysql中的subject表构造出相应的虚拟文档，存到虚拟文档表中．
 
-# list:record subjects that have been executed recently
-list_sbj = list()
+    为了程序支持多进程，所以函数的输入为，
+    id_lowerbound: 起始id
+    id_upperbound: 结束id + 1
 
+    batch: (单个进程中)每一个批次处理sbj的个数,默认为150
 
-def construct():
-    for num in range(number_of_triples):
-        start = time.clock()
-        statement = conn_graph.getStatementsById(num + 1)
-        print("####################", num + 1, "####################")
+    """
 
-        tag_SBJ = None
-        for result in statement:
-            tag_SBJ = result.getPredicate()
+    # Loop1:批次
+    while id_lowerbound < id_upperbound:
+        # 分批次处理
+        sql_find_subject = ("select sbj from `{tb_sbj}` where `id` >= {lb} and `id` < {ub}"
+                            .format(tb_sbj=table_subject, lb=id_lowerbound, ub=min(id_lowerbound+batch, id_upperbound)))
 
-        # Loop controller
+        # mysql查找
+        with conn_db.cursor() as cursor:
+            cursor.execute(sql_find_subject)
 
-        # construct name vector
-        try:
-            pattern = re.compile('/resource/(.*)>')
-            mo = pattern.search(str(tag_SBJ))
-            SBJ = parse.unquote(mo.group(1))
-            vector_SBJ = seg.to_vector(parse.unquote(mo.group(1)), 'punctuation')
-        except Exception:
-            continue
+            """
+            Loop2: 单个sbj in 所有sbj
+            fetchall: tuple(tuple(sbj))
+            这里fetchall正确运行时不会Error
+            """
+            for f in cursor.fetchall():
+                # 结果集合,如果当前sbj为空,跳过
+                sbj = f[0].strip()
+                if sbj is '':
+                    continue
 
-        # find abstract and category respectively,then process
-        # abstract, weight = 1
-        tag_ABS = None
-        vector_ABS = dict()
+                tag_SBJ = conn_graph.createURI(sbj)
+                tag_ABS = ''
+                tag_CTGs = []
 
-        with conn_graph.getStatements(subject=tag_SBJ, predicate='<http://zhishi.me/ontology/abstract>') as abs:
-            for a in abs:
-                tag_ABS = a.getObject()
+                """查找每个sbj的abstract和category"""
+                with conn_graph.getStatements(subject=tag_SBJ, predicate='<http://zhishi.me/ontology/abstract>') as abstract:
+                    for a in abstract:
+                        tag_ABS = a.getObject()
 
-        try:
-            vector_ABS = seg.to_vector(str(tag_ABS), 'cn')
-        except Exception:
-            print('no abstract')
+                with conn_graph.getStatements(subject=tag_SBJ, predicate='<http://zhishi.me/ontology/category>') as ctg:
+                    for c in ctg:
+                        tag_CTGs.append(str(c.getObject()).strip())
 
-        #category, weight = 2
-        tag_CTGs = []
-        list_CTGs = list()
+                # subject,abstract分出的向量
+                vector_SBJ = dict()
+                vector_ABS = dict()
+                """construct name vector"""
+                pattern = re.compile('/resource/(.*)>')
+                mo = pattern.search(str(tag_SBJ))
+                SBJ = ''
 
-        with conn_graph.getStatements(subject=tag_SBJ, predicate='<http://zhishi.me/ontology/category>') as ctg:
-            for c in ctg:
-                tag_CTGs.append(c.getObject())
+                try:
+                    SBJ = mo.group(1)
+                    # 分词模块,过滤中文
+                    vector_SBJ = seg.to_vector(parse.unquote(SBJ), 'cn')
+                except Exception:
+                    print(tag_SBJ, 'name error')
+                    pass
 
-        pattern = re.compile('/category/(.*)>')
-        for item in tag_CTGs:
-            try:
-                mo = pattern.search(str(item))
-                list_CTGs += seg.to_vector(parse.unquote(mo.group(1)), returntf=False)
-            except Exception:
-                continue
+                '''摘要分词'''
+                try:
+                    vector_ABS = seg.to_vector(str(tag_ABS), 'cn')
+                except Exception:
+                    pass
 
-        vector_CTGs = seg.tf_counter(list_CTGs)
+                '''类别分词'''
+                list_CTGs = list()
+                pattern = re.compile('/category/(.*)>')
+                for item in tag_CTGs:
+                    try:
+                        mo = pattern.search(str(item))
+                        list_CTGs += seg.to_vector(parse.unquote(mo.group(1)), returntf=False)
+                    except Exception:
+                        continue
+                vector_CTGs = seg.tf_counter(list_CTGs)
 
-        virtual_document = seg.combination_dict(
-            seg.combination_dict(vector_ABS, vector_CTGs, weight_of_category), vector_SBJ, weight_of_subject)
+                '''向数据表nv_插入名称向量'''
+                sql_insert_nv = """insert into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """.format(table=table_nv)
+                try:
+                    cursor.execute(sql_insert_nv, (SBJ, json.dumps(vector_SBJ)))
+                except pymysql.err.IntegrityError:
+                    pass
+                except pymysql.err.DataError:
+                    pass
+                except pymysql.err.InternalError:
+                    pass
 
-        # virtual_document = seg.simple_normalization(virtual_document)
+                '''计算虚拟文档'''
+                virtual_document = seg.combination_dict(
+                     seg.combination_dict(vector_ABS, vector_CTGs, weight_of_category), vector_SBJ, weight_of_subject)
 
-        print(SBJ)
-        print(virtual_document)
-        print('Time used:', time.clock() - start)
+                """
+                向数据表 vd_zhwiki 中插入虚拟文档
+                """
+                sql_insert_vd = """insert into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """.format(table=table_vd)
+                try:
+                    cursor.execute(sql_insert_vd, (SBJ, json.dumps(virtual_document)))
+                except pymysql.err.IntegrityError:
+                    pass
+                except pymysql.err.DataError:
+                    pass
+                except pymysql.err.InternalError:
+                    pass
 
-        # insert into mysql
-        try:
-            with conn_db.cursor() as cursor:
-                cursor.execute(sql_insert, [str(tag_SBJ), json.dumps(virtual_document)])
-        except pymysql.err.IntegrityError:
-            print('IntegrityError!')
-        except pymysql.err.DataError:
-            print('Data Error!')
-        except pymysql.err.InternalError:
-            print('InternalError')
-        if num % 233 is 0:
             conn_db.commit()
+
+        # 更新id下界
+        id_lowerbound += batch
 
 
 if __name__ == "__main__":
-    construct()
+    total = 4330762
+    parts = 2
+
+    """7月7日 第一部分"""
 
 
 
+    num_of_process = 4
 
+    quarter = 4330762 / parts / num_of_process + 1
 
+    no_begin = 0
 
+    arglist =[(1 + no_begin, quarter + no_begin),
+              (quarter + no_begin, quarter*2+1 + no_begin),
+              (quarter*2+1 + no_begin, quarter*3+1 + no_begin),
+              (quarter*3+1 + no_begin, quarter*4+1 + no_begin),
+              (quarter*4+1 + no_begin, quarter*5+1 + no_begin),
+              (quarter*5+1 + no_begin, quarter*6+1 + no_begin),
+              (quarter*6+1 + no_begin, quarter*7+1 + no_begin),
+              (quarter*7+1 + no_begin, quarter*8+1 + no_begin),
+              (quarter*8+1, quarter*9+1),
 
+              ]
 
-
+    """num 进程"""
+    for i in range(1, num_of_process + 1):
+        p = Process(target=construct, args=arglist[i-1])
+        print(i)
+        p.start()
 
 
 

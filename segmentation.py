@@ -7,6 +7,9 @@ import math
 
 # segmentation and calculate the tf
 def to_vector(paragraph, stop_mode='punctuation', returntf=True):
+    if len(paragraph) is 0:
+        raise IOError
+
     # 过滤非中文
     pattern = re.compile(r"[^\u4e00-\u9fa5A-Za-z]")
     segs = jieba.lcut(pattern.sub('', paragraph), cut_all=False)
