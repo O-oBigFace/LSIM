@@ -131,8 +131,8 @@ def construct(id_lowerbound, id_upperbound, batch=150):
                     pass
                 except pymysql.err.DataError:
                     pass
-                except pymysql.err.InternalError:
-                    pass
+                # except pymysql.err.InternalError:
+                #     pass
 
                 '''计算虚拟文档'''
                 virtual_document = seg.combination_dict(
