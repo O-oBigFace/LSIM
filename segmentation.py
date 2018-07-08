@@ -15,10 +15,8 @@ def to_vector(paragraph, stop_mode='punctuation', returntf=True):
 
     # # 去中文停用词
     if stop_mode is 'cn':
-        sw = []
         with open(r'./res/stop_cn', 'r', encoding='utf-8') as f:
-            for line in f.readlines():
-                sw.append(line.strip())
+            sw = (w.strip() for w in f.readlines())
         segs = list(filter(lambda x: x not in sw, segs))
 
     if not returntf:

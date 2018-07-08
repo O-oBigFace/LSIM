@@ -24,7 +24,6 @@ user_mysql = scg.user_mysql
 password_mysql =scg.password_mysql
 table_vd = scg.table_vd
 table_nv = scg.table_nv
-table_entity = scg.table_entity
 table_subject = scg.table_subject
 
 
@@ -131,8 +130,8 @@ def construct(id_lowerbound, id_upperbound, batch=150):
                     pass
                 except pymysql.err.DataError:
                     pass
-                # except pymysql.err.InternalError:
-                #     pass
+                except pymysql.err.InternalError:
+                    pass
 
                 '''计算虚拟文档'''
                 virtual_document = seg.combination_dict(

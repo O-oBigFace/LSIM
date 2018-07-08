@@ -3,9 +3,10 @@ configure
 """
 
 base = "zhwiki"
-num_of_subjects = 991388
 
+dict_pedias = {'zhwiki': 991388, 'hugongbaike': 4330761, 'baidubaike': 14013129}
 
+num_of_subjects = dict_pedias[base]
 
 
 # agraph
@@ -21,7 +22,6 @@ host_mysql = '192.168.1.101'
 port_mysql = 3306
 user_mysql = 'xyk'
 password_mysql = "123"
-table_entity = 'entity_{base}'.format(base=base)
 table_vd = 'vd_{base}'.format(base=base)
 table_nv = 'nv_{base}'.format(base=base)
 table_subject = 'subject_{base}'.format(base=base)
