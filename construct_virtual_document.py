@@ -4,7 +4,6 @@ import pymysql
 import re
 from urllib import parse
 import segmentation as seg
-import time
 import json
 import serverCONFIG as scg
 from multiprocessing import Process
@@ -24,7 +23,7 @@ port_mysql = scg.port_mysql
 user_mysql = scg.user_mysql
 password_mysql =scg.password_mysql
 table_vd = scg.table_vd
-table_nv = scg.table_vd
+table_nv = scg.table_nv
 table_entity = scg.table_entity
 table_subject = scg.table_subject
 
@@ -102,8 +101,8 @@ def construct(id_lowerbound, id_upperbound, batch=150):
                     SBJ = mo.group(1)
                     # 分词模块,过滤中文
                     vector_SBJ = seg.to_vector(parse.unquote(SBJ), 'cn')
-                except Exception:
-                    print(tag_SBJ, 'name error')
+                except Exception as e:
+                    print(tag_SBJ, str(e))
                     pass
 
                 '''摘要分词'''
@@ -124,7 +123,8 @@ def construct(id_lowerbound, id_upperbound, batch=150):
                 vector_CTGs = seg.tf_counter(list_CTGs)
 
                 '''向数据表nv_插入名称向量'''
-                sql_insert_nv = """insert into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """.format(table=table_nv)
+                sql_insert_nv = """insert into `{table}` (`sbj`, `nv`) VALUES (%s, %s) """.format(table=table_nv)
+
                 try:
                     cursor.execute(sql_insert_nv, (SBJ, json.dumps(vector_SBJ)))
                 except pymysql.err.IntegrityError:
@@ -138,9 +138,9 @@ def construct(id_lowerbound, id_upperbound, batch=150):
                 virtual_document = seg.combination_dict(
                      seg.combination_dict(vector_ABS, vector_CTGs, weight_of_category), vector_SBJ, weight_of_subject)
 
-                """
+                '''
                 向数据表 vd_zhwiki 中插入虚拟文档
-                """
+                '''
                 sql_insert_vd = """insert into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """.format(table=table_vd)
                 try:
                     cursor.execute(sql_insert_vd, (SBJ, json.dumps(virtual_document)))
@@ -153,21 +153,20 @@ def construct(id_lowerbound, id_upperbound, batch=150):
 
             conn_db.commit()
 
+
         # 更新id下界
         id_lowerbound += batch
 
 
 if __name__ == "__main__":
-    total = 4330762
-    parts = 2
+    total = scg.num_of_subjects
+    parts = 1
 
     """7月7日 第一部分"""
 
-
-
     num_of_process = 4
 
-    quarter = 4330762 / parts / num_of_process + 1
+    quarter = total / parts / num_of_process + 1
 
     no_begin = 0
 
@@ -176,11 +175,6 @@ if __name__ == "__main__":
               (quarter*2+1 + no_begin, quarter*3+1 + no_begin),
               (quarter*3+1 + no_begin, quarter*4+1 + no_begin),
               (quarter*4+1 + no_begin, quarter*5+1 + no_begin),
-              (quarter*5+1 + no_begin, quarter*6+1 + no_begin),
-              (quarter*6+1 + no_begin, quarter*7+1 + no_begin),
-              (quarter*7+1 + no_begin, quarter*8+1 + no_begin),
-              (quarter*8+1, quarter*9+1),
-
               ]
 
     """num 进程"""

@@ -1,6 +1,5 @@
 import jieba
 import pandas
-import os
 import re
 import math
 
@@ -8,16 +7,16 @@ import math
 # segmentation and calculate the tf
 def to_vector(paragraph, stop_mode='punctuation', returntf=True):
     if len(paragraph) is 0:
-        raise IOError
+        raise Exception("The length of string is 0.")
 
     # 过滤非中文
-    pattern = re.compile(r"[^\u4e00-\u9fa5A-Za-z]")
+    pattern = re.compile(r"[^\u4e00-\u9fa5A-Za-z0-9]")
     segs = jieba.lcut(pattern.sub('', paragraph), cut_all=False)
 
     # # 去中文停用词
     if stop_mode is 'cn':
         sw = []
-        with open(r'./res/stop_cn', 'r') as f:
+        with open(r'./res/stop_cn', 'r', encoding='utf-8') as f:
             for line in f.readlines():
                 sw.append(line.strip())
         segs = list(filter(lambda x: x not in sw, segs))
@@ -53,9 +52,3 @@ def simple_normalization(vector):
     for k, v in vector.items():
         vector[k] = v/summary
     return vector
-
-
-if __name__ == "__main__":
-    a = {'中国': 1, "日本": 2, "朝鲜": 3}
-    b = { "日本": 2, '美国': 3}
-    print(combination_dict(a, b))
