@@ -5,7 +5,7 @@ import math
 
 
 # segmentation and calculate the tf
-def to_vector(paragraph, stop_mode='punctuation', returntf=True):
+def to_vector(paragraph, stop_mode='cn', returntf=True):
     if len(paragraph) is 0:
         raise Exception("The length of string is 0.")
 

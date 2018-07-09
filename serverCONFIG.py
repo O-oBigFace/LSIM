@@ -22,7 +22,8 @@ host_mysql = '192.168.1.101'
 port_mysql = 3306
 user_mysql = 'xyk'
 password_mysql = "123"
-table_vd = 'vd_{base}'.format(base=base)
-table_nv = 'nv_{base}'.format(base=base)
-table_subject = 'subject_{base}'.format(base=base)
+table_vd = 'vd_{base}'.format(base=base)  # 虚拟文档表
+table_nv = 'nv_{base}'.format(base=base)  # name vector 表
+table_subject = 'subject_{base}'.format(base=base)  # subject表
+table_inverted = 'inverted'  # 倒排索引表
 
