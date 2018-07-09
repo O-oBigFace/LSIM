@@ -27,7 +27,7 @@ table_nv = scg.table_nv
 table_subject = scg.table_subject
 
 
-sql_insert = """insert into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """.format(table=table_vd)
+sql_insert = """insert ignore into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """.format(table=table_vd)
 
 weight_of_subject = 3.1
 weight_of_category = 2.1
@@ -122,7 +122,7 @@ def construct(id_lowerbound, id_upperbound, batch=150):
                 vector_CTGs = seg.tf_counter(list_CTGs)
 
                 '''向数据表nv_插入名称向量'''
-                sql_insert_nv = """insert into `{table}` (`sbj`, `nv`) VALUES (%s, %s) """.format(table=table_nv)
+                sql_insert_nv = """insert ignore into `{table}` (`sbj`, `nv`) VALUES (%s, %s) """.format(table=table_nv)
 
                 try:
                     cursor.execute(sql_insert_nv, (SBJ, json.dumps(vector_SBJ)))
@@ -140,7 +140,7 @@ def construct(id_lowerbound, id_upperbound, batch=150):
                 '''
                 向数据表 vd_zhwiki 中插入虚拟文档
                 '''
-                sql_insert_vd = """insert into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """.format(table=table_vd)
+                sql_insert_vd = """insert ignore into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """.format(table=table_vd)
                 try:
                     cursor.execute(sql_insert_vd, (SBJ, json.dumps(virtual_document)))
                 except pymysql.err.IntegrityError:
