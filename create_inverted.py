@@ -26,7 +26,7 @@ def create_inverted(lock, table, pattern, id_lowerbound, id_upperbound, batch=15
             pattern - string - 表的含义 nv OR vd？
             id_lowerbound - int - 生成范围下界
             id_upperbound - int - 生成范围上界
-            batch - interesting - 批次数量，缺省值 150
+            batch - interesting - 批次数量，缺省值 15000
     """
 
     '''查找到的数据是一个string，可以用json解析'''

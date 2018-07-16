@@ -46,6 +46,7 @@ def db_execute(cursor, sql, values):
 
 
 def construct(id_lowerbound, id_upperbound, batch=1500):
+    print("construct: ", id_lowerbound, "~", id_upperbound)
     # connect to mysql
     # 获得数据库连接
     conn_db = pool_db.connection()
@@ -59,33 +60,27 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
     batch: (单个进程中)每一个批次处理sbj的个数,默认为1500
     """
 
-    ''' 
-    分批次处理 
-    从subjuect表中查找id, sbj
-    '''
-    # sql_find_subject = ("select sbj from `{tb_sbj}` where `id` >= {lb} and `id` < {ub}"
-    #                     .format(tb_sbj=scg.table_subject,
-    #                             lb=id_lowerbound,
-    #                             ub=min(id_lowerbound + batch, id_upperbound)))
-    sql_find_subject = ("select sbj,id from `{tb_sbj}` where `id` >= {lb} and `id` < {ub}"
-                        .format(tb_sbj=scg.table_subject,
-                                lb=id_lowerbound,
-                                ub=min(id_lowerbound + batch, id_upperbound)))
-
-    ''' 向数据表nv_插入名称向量 '''
-    # sql_insert_nv = ("""insert ignore into `{table}` (`sbj`, `nv`) VALUES (%s, %s) """
-    #                  .format(table=scg.table_nv))
-    sql_insert_nv = ("""insert ignore into `{table}` (`id`, `sbj`, `nv`) VALUES (%s, %s, %s) """
-                     .format(table=scg.table_nv))
-
-    ''' 向数据表 vd_zhwiki 中插入虚拟文档 '''
-    # sql_insert_vd = ("""insert ignore into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """
-    #                  .format(table=scg.table_vd))
-    sql_insert_vd = ("""insert ignore into `{table}` (`id`, `sbj`, `vd`) VALUES (%s, %s, %s) """
-                     .format(table=scg.table_vd))
-
     # Loop1:批次
     while id_lowerbound < id_upperbound:
+        ''' 
+        分批次处理 
+        从subjuect表中查找id, sbj
+        '''
+        sql_find_subject = ("select id, sbj from `{tb_sbj}` where `id` >= {lb} and `id` < {ub}"
+                            .format(tb_sbj=scg.table_subject,
+                                    lb=id_lowerbound,
+                                    ub=min(id_lowerbound + batch, id_upperbound)))
+
+        ''' 向数据表nv_插入名称向量 '''
+
+        sql_insert_nv = ("""insert ignore into `{table}` (`id`, `sbj`, `nv`) VALUES (%s, %s, %s) """
+                         .format(table=scg.table_nv))
+
+        ''' 向数据表 vd_zhwiki 中插入虚拟文档 '''
+
+        sql_insert_vd = ("""insert ignore into `{table}` (`id`, `sbj`, `vd`) VALUES (%s, %s, %s) """
+                         .format(table=scg.table_vd))
+
         # mysql查找
         cursor.execute(sql_find_subject)
         """
@@ -93,17 +88,15 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
         fetchall: tuple(tuple(sbj))
         这里fetchall正确运行时不会Error
         """
-
-        
-
-        f = {c[0].strip() for c in cursor.fetchall()}
-        for sbj in f:
-            # 结果集合,如果当前sbj为空,跳过
+        result = cursor.fetchall()
+        for r in result:
+            id = r[0]
+            sbj = r[1]  #URL形式
             if len(sbj) < 1:
                 continue
 
             tag_SBJ = conn_graph.createURI(sbj)
-            tag_ABS = ''
+            tag_ABS = str()
 
             """查找每个sbj的abstract和category"""
             with conn_graph.getStatements(subject=tag_SBJ,
@@ -121,24 +114,25 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
             vector_SBJ = dict()
             vector_ABS = dict()
             """construct name vector"""
-            pattern = re.compile('/resource/(.*)>')
+            pattern = re.compile('/resource/(.*)')
             mo = pattern.search(str(tag_SBJ))
-            SBJ = ''
+            SBJ = str()
 
             try:
-                SBJ = mo.group(1)
+                SBJ = parse.unquote(mo.group(1))
                 # 分词模块,过滤中文
-                vector_SBJ = seg.to_vector(parse.unquote(SBJ), 'cn')
+                vector_SBJ = seg.to_vector(SBJ, 'cn')
             except Exception as e:
                 print(tag_SBJ, str(e))
                 pass
 
-            db_execute(cursor, sql_insert_nv, (SBJ, json.dumps(vector_SBJ)))
+            db_execute(cursor, sql_insert_nv, (id, SBJ, json.dumps(vector_SBJ)))
 
             '''摘要分词'''
             try:
                 vector_ABS = seg.to_vector(str(tag_ABS), 'cn')
-            except Exception:
+            except Exception as e:
+                # print("abstract:", e)
                 pass
 
             '''类别分词'''
@@ -156,12 +150,13 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
             virtual_document = seg.combination_dict(
                  seg.combination_dict(vector_ABS, vector_CTGs, weight_of_category), vector_SBJ, weight_of_subject)
 
-            db_execute(cursor, sql_insert_vd, (SBJ, json.dumps(virtual_document)))
+            db_execute(cursor, sql_insert_vd, (id, SBJ, json.dumps(virtual_document)))
 
             conn_db.commit()
 
         # 更新id下界
         id_lowerbound += batch
+
     cursor.close()
     conn_db.close()
 

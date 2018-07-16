@@ -5,7 +5,7 @@ import serverCONFIG as scg
 
 def multi_run(function_name, num_of_process):
     total = scg.num_of_subjects
-    quarter = total / num_of_process + 1
+    quarter = int(total / num_of_process) + 1
     no_begin = 0
     arglist = [
                (1 + no_begin, quarter + no_begin),
@@ -18,5 +18,4 @@ def multi_run(function_name, num_of_process):
     """num 进程"""
     for i in range(1, num_of_process + 1):
         p = Process(target=function_name, args=arglist[i-1])
-        print(i)
         p.start()
