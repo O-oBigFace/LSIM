@@ -93,6 +93,9 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
         fetchall: tuple(tuple(sbj))
         这里fetchall正确运行时不会Error
         """
+
+        
+
         f = {c[0].strip() for c in cursor.fetchall()}
         for sbj in f:
             # 结果集合,如果当前sbj为空,跳过
