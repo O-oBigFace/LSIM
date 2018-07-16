@@ -45,6 +45,18 @@ def db_execute(cursor, sql, values):
         pass
 
 
+def db_executemany(cursor, sql, values):
+    try:
+        cursor.execute(sql, values)
+    except pymysql.err.IntegrityError:
+        pass
+    except pymysql.err.DataError:
+        pass
+    except pymysql.err.InternalError:
+        pass
+
+
+# 注意: 表插入操作过于频繁!!!!
 def construct(id_lowerbound, id_upperbound, batch=1500):
     print("construct: ", id_lowerbound, "~", id_upperbound)
     # connect to mysql
@@ -88,6 +100,8 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
         fetchall: tuple(tuple(sbj))
         这里fetchall正确运行时不会Error
         """
+        insert_list_nv = list()
+        intert_list_vd = list()
         result = cursor.fetchall()
         for r in result:
             id = r[0]
@@ -126,8 +140,8 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
                 print(tag_SBJ, str(e))
                 pass
 
-            db_execute(cursor, sql_insert_nv, (id, SBJ, json.dumps(vector_SBJ)))
-
+            # db_execute(cursor, sql_insert_nv, (id, SBJ, json.dumps(vector_SBJ)))
+            insert_list_nv.append((id, SBJ, json.dumps(vector_SBJ)))
             '''摘要分词'''
             try:
                 vector_ABS = seg.to_vector(str(tag_ABS), 'cn')
@@ -150,9 +164,13 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
             virtual_document = seg.combination_dict(
                  seg.combination_dict(vector_ABS, vector_CTGs, weight_of_category), vector_SBJ, weight_of_subject)
 
-            db_execute(cursor, sql_insert_vd, (id, SBJ, json.dumps(virtual_document)))
+            # db_execute(cursor, sql1_insert_vd, (id, SBJ, json.dumps(virtual_document)))
+            intert_list_vd.append((id, SBJ, json.dumps(virtual_document)))
 
-            conn_db.commit()
+        # 这里可能需要加锁
+        db_executemany(cursor, sql_insert_nv, insert_list_nv)
+        db_executemany(cursor, sql_insert_vd, intert_list_vd)
+        conn_db.commit()
 
         # 更新id下界
         id_lowerbound += batch
