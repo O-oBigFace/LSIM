@@ -2,9 +2,9 @@
 configure
 """
 
-base = "zhwiki"
+base = "hudongbaike"
 
-dict_pedias = {'zhwiki': 991388, 'hugongbaike': 4330761, 'baidubaike': 14013129}
+dict_pedias = {'zhwiki': 991388, 'hudongbaike': 4330761, 'baidubaike': 14013129}
 
 num_of_subjects = dict_pedias[base]
 

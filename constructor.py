@@ -45,7 +45,7 @@ def db_execute(cursor, sql, values):
         pass
 
 
-def construct(lock, id_lowerbound, id_upperbound, batch=1500):
+def construct(id_lowerbound, id_upperbound, batch=1500):
     # connect to mysql
     # 获得数据库连接
     conn_db = pool_db.connection()
@@ -59,18 +59,29 @@ def construct(lock, id_lowerbound, id_upperbound, batch=1500):
     batch: (单个进程中)每一个批次处理sbj的个数,默认为1500
     """
 
-    ''' 分批次处理 '''
-    sql_find_subject = ("select sbj from `{tb_sbj}` where `id` >= {lb} and `id` < {ub}"
+    ''' 
+    分批次处理 
+    从subjuect表中查找id, sbj
+    '''
+    # sql_find_subject = ("select sbj from `{tb_sbj}` where `id` >= {lb} and `id` < {ub}"
+    #                     .format(tb_sbj=scg.table_subject,
+    #                             lb=id_lowerbound,
+    #                             ub=min(id_lowerbound + batch, id_upperbound)))
+    sql_find_subject = ("select sbj,id from `{tb_sbj}` where `id` >= {lb} and `id` < {ub}"
                         .format(tb_sbj=scg.table_subject,
                                 lb=id_lowerbound,
                                 ub=min(id_lowerbound + batch, id_upperbound)))
 
     ''' 向数据表nv_插入名称向量 '''
-    sql_insert_nv = ("""insert ignore into `{table}` (`sbj`, `nv`) VALUES (%s, %s) """
+    # sql_insert_nv = ("""insert ignore into `{table}` (`sbj`, `nv`) VALUES (%s, %s) """
+    #                  .format(table=scg.table_nv))
+    sql_insert_nv = ("""insert ignore into `{table}` (`id`, `sbj`, `nv`) VALUES (%s, %s, %s) """
                      .format(table=scg.table_nv))
 
     ''' 向数据表 vd_zhwiki 中插入虚拟文档 '''
-    sql_insert_vd = ("""insert ignore into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """
+    # sql_insert_vd = ("""insert ignore into `{table}` (`sbj`, `vd`) VALUES (%s, %s) """
+    #                  .format(table=scg.table_vd))
+    sql_insert_vd = ("""insert ignore into `{table}` (`id`, `sbj`, `vd`) VALUES (%s, %s, %s) """
                      .format(table=scg.table_vd))
 
     # Loop1:批次

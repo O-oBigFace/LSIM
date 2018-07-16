@@ -48,8 +48,9 @@ def create_inverted(lock, table, pattern, id_lowerbound, id_upperbound, batch=15
     #                           port=scg.port_mysql,
     #                           user=scg.user_mysql,
     #                           password=scg.password_mysql,
-    #                           db=scg.db_mysql)
-    # conn_db.set_charset('utf8')
+    #                           db=scg.db_mysql,
+    #                           charset='utf8')
+
     cursor = conn_db.cursor()
     # Loop: 分批次处理
     while id_lowerbound < id_upperbound:
@@ -58,22 +59,22 @@ def create_inverted(lock, table, pattern, id_lowerbound, id_upperbound, batch=15
         # fetall()返回元组对象 ((表项1), (表项2), ...)
         f = cursor.fetchall()
         result = {k for s in f if len(s[0]) > 1 for k in json.loads(s[0]).keys()}
+
         lock.acquire()
         cursor.executemany(sql_insert, result)
         id_lowerbound += batch
-
-    # try:
-        conn_db.commit()
-    # finally:
-    #     lock.release()
+        print(id_lowerbound)
+        try:
+            conn_db.commit()
+        finally:
+            lock.release()
 
     cursor.close()
     conn_db.close()
 
 
 if __name__ == "__main__":
-    # total = 991273
-    total = 300000
+    total = 991273
     parts = 1
 
     num_of_process = 4
