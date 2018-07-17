@@ -128,7 +128,7 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
             vector_SBJ = dict()
             vector_ABS = dict()
             """construct name vector"""
-            pattern = re.compile('/resource/(.*)')
+            pattern = re.compile('/resource/(.*)>')
             mo = pattern.search(str(tag_SBJ))
             SBJ = str()
 
