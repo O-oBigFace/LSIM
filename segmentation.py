@@ -16,7 +16,7 @@ def to_vector(paragraph, stop_mode='cn', returntf=True):
     # # 去中文停用词
     if stop_mode is 'cn':
         with open(r'./res/stop_cn', 'r', encoding='utf-8') as f:
-            sw = (w.strip() for w in f.readlines())
+            sw = {w.strip() for w in f.readlines()}
         segs = list(filter(lambda x: x not in sw, segs))
 
     if not returntf:
@@ -50,3 +50,8 @@ def simple_normalization(vector):
     for k, v in vector.items():
         vector[k] = v/summary
     return vector
+
+
+if __name__ == '__main__':
+    l = to_vector('巧克力蛋糕（英语：Chocolate cake）是一种以巧克力制成的蛋糕，于生日派对及婚礼常见，也是常见的甜品之一。巧克力蛋糕有时被误称为黑森林蛋糕，虽然两者实际上有分别。', 'cn')
+    print(l)
