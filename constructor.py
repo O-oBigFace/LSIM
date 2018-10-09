@@ -31,7 +31,7 @@ db_config = {
             'db': scg.db_mysql,
             'charset': 'utf8'
             }
-pool_db = PooledDB.PooledDB(pymysql, mincached=2, maxcached=6, blocking=True, **db_config)
+# pool_db = PooledDB.PooledDB(pymysql, mincached=2, maxcached=6, blocking=True, **db_config)
 
 
 def db_execute(cursor, sql, values):
@@ -62,7 +62,8 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
     print("construct: ", id_lowerbound, "~", id_upperbound)
     # connect to mysql
     # 获得数据库连接
-    conn_db = pool_db.connection()
+    # conn_db = pool_db.connection()
+    conn_db = pymysql.connect(**db_config)
     cursor = conn_db.cursor()
 
     """
@@ -177,7 +178,7 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
         id_lowerbound += batch
 
     cursor.close()
-    conn_db.close()
+    # conn_db.close()
 
 
 

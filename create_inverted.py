@@ -58,11 +58,12 @@ def create_inverted(lock, table, pattern, id_lowerbound, id_upperbound, batch=20
         result = {k for s in f if len(s[0]) > 1 for k in json.loads(s[0]).keys()}
 
         lock.acquire()
+        start = time.clock()
         cursor.executemany(sql_insert, result)
         id_lowerbound += batch
         print(id_lowerbound)
         try:
-            start = time.clock()
+            # start = time.clock()
             conn_db.commit()
             print('Time used:', time.clock() - start)
         finally:
@@ -73,16 +74,7 @@ def create_inverted(lock, table, pattern, id_lowerbound, id_upperbound, batch=20
 
 
 if __name__ == "__main__":
-    # 列出需要创建倒排索引的表
-    raw_tables = [
-        'zhwiki',
-        'hudongbaike_1',
-        'hudongbaike_2',
-        'hudongbaike_3',
-        'hudongbaike_4',
-        'hudongbaike_5',
-    ]
- 
+    raw_tables = ["baidubaike_" + str(i) for i in range(11, 14)]
     lock = multiprocessing.Lock()
 
     for table in raw_tables:
@@ -92,5 +84,6 @@ if __name__ == "__main__":
 
         process.start()
         print(process.pid)
+        time.sleep(5)
 
 
