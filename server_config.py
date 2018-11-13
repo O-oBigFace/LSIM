@@ -4,9 +4,9 @@ configure
 
 pedia = "baidubaike"
 # # 表后缀
-# base = "zhwiki_1"
+base = "zhwiki_1"
 # # 表起始id
-# begin_index = 12000000
+begin_index = 12000000
 
 # 表大小
 dict_pedias = {'zhwiki': 991388,
