@@ -138,8 +138,11 @@ def ld_constructor(name_pedia, init_id=0, batch_size=2000):
         res = [json.dumps(r) for r in pool.map(calculate_sbj, sbj_batch)]
 
         # 将结果存入数据库,插入语句
+        num_table = current_id // 1000000 + 1   # 表id
+        sql_create_table = r"CREATE TABLE IF NOT EXISTS `ld_%s_%d` like ld_zhwiki_1"
+        cursor.execute(sql_create_table)    # 如果表不存在，则创建
         sql_insert_ld = ("""insert ignore into `{table}` (`id`, `ld`) VALUES (%s, %s) """
-                         .format(table="ld_%s_%d" % (pedia, current_id / 1000000 + 1)))
+                         .format(table="ld_%s_%d" % (pedia, num_table)))
         db_executemany(cursor, sql_insert_ld, zip(sbj_id, res))
         conn.commit()
         logger.info("Current id: %d~%d | Time used: %.2f" % (current_id, current_id + batch_size, time.time() - start))
