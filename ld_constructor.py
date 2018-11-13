@@ -5,8 +5,8 @@ from server_config import *
 from franz.openrdf.sail.allegrographserver import AllegroGraphServer
 from franz.openrdf.repository.repository import Repository
 import pymysql
-from urllib import parse
 from segmentation import *
+from Logger import logger
 import json
 from multiprocessing.pool import Pool
 import time
@@ -61,10 +61,10 @@ def db_executemany(cursor, sql, values):
     except pymysql.err.InternalError:
         pass
 
+
 # 根据键值计算ld
 def ld_process(info_dict):
     vec_sbj = dict()
-    # vec_sbj = vec_abs = vec_pro = vec_cat = vec_rel = vec_ilk = dict()
 
     # abstract
     if len(info_dict.setdefault('abstract', list())) > 0:
@@ -109,7 +109,7 @@ def calculate_sbj(sbj):
 
 
 # 构建ld向量并存入到相应数据库
-def ld_constructor(name_pedia, init_id=0, batch_size=1000):
+def ld_constructor(name_pedia, init_id=0, batch_size=2000):
     batch = batch_size    # 预先决定 batch
     current_id = init_id  # 初始id置为0
     max_id = dict_pedias[name_pedia]
@@ -135,19 +135,16 @@ def ld_constructor(name_pedia, init_id=0, batch_size=1000):
 
         sbj_batch = [s[1] for s in f]
         sbj_id = [s[0] for s in f]
-        res = [json.dumps(r) for r in  pool.map(calculate_sbj, sbj_batch)]
+        res = [json.dumps(r) for r in pool.map(calculate_sbj, sbj_batch)]
 
         # 将结果存入数据库,插入语句
         sql_insert_ld = ("""insert ignore into `{table}` (`id`, `ld`) VALUES (%s, %s) """
                          .format(table="ld_%s_%d" % (pedia, current_id / 1000000 + 1)))
         db_executemany(cursor, sql_insert_ld, zip(sbj_id, res))
         conn.commit()
-        print("time use:", time.time() - start)
+        logger.info("Current id: %d~%d | Time used: %.2f" % (current_id, current_id + batch_size, time.time() - start))
         current_id += batch
 
 
 if __name__ == '__main__':
-    # sbj = "http://zhishi.me/zhwiki/resource/%C3%97"
-    # d = calculate(sbj)
-    # print(d)
-    ld_constructor(pedia, init_id=100000)
+    ld_constructor(pedia, init_id=0)
