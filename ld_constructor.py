@@ -141,6 +141,7 @@ def ld_constructor(name_pedia, init_id=0, batch_size=1000):
         sql_insert_ld = ("""insert ignore into `{table}` (`id`, `ld`) VALUES (%s, %s) """
                          .format(table="ld_%s_%d" % (pedia, current_id / 1000000 + 1)))
         db_executemany(cursor, sql_insert_ld, zip(sbj_id, res))
+        conn.commit()
         print("time use:", time.time() - start)
         current_id += batch
 
