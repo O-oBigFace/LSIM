@@ -109,7 +109,7 @@ def calculate_sbj(sbj):
 
 
 # 构建ld向量并存入到相应数据库
-def ld_constructor(name_pedia, init_id=0, batch_size=2000):
+def ld_constructor(name_pedia, init_id=0, batch_size=5000):
     batch = batch_size    # 预先决定 batch
     current_id = init_id  # 初始id置为0
     max_id = dict_pedias[name_pedia]
