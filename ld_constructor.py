@@ -118,7 +118,7 @@ def ld_constructor(name_pedia, init_id=0, batch_size=2000):
     conn = pymysql.connect(**para_mysql)
     cursor = conn.cursor()
 
-    pool = Pool(4)  # 初始化线程池
+    pool = Pool()  # 初始化线程池
 
     while current_id <= max_id:
         start = time.time()
