@@ -1,4 +1,4 @@
-import serverCONFIG as scg
+import server_config as scg
 import pymysql
 from DBUtils import PooledDB
 import json
@@ -11,15 +11,7 @@ warnings.filterwarnings('ignore')
 
 
 # connect to mysql
-db_config = {
-            'host': scg.host_mysql,
-            'port': scg.port_mysql,
-            'user': scg.user_mysql,
-            'password': scg.password_mysql,
-            'db': scg.db_mysql,
-            'charset': 'utf8'
-            }
-pool_db = PooledDB.PooledDB(pymysql, mincached=2, maxcached=6, blocking=True, **db_config)
+pool_db = PooledDB.PooledDB(pymysql, mincached=2, maxcached=6, blocking=True, **scg.para_mysql)
 
 
 def create_inverted(lock, table, pattern, id_lowerbound, id_upperbound, batch=200000):

@@ -2,9 +2,9 @@
 configure
 """
 
-pedia = "baidubaike"
+pedia = "zhwiki"
 # 表后缀
-base = "baidubaike_13"
+base = "zhwiki_1"
 # 表起始id
 begin_index = 12000000
 
@@ -59,7 +59,6 @@ dict_pedias_lowerbound = {
                 'baidubaike_13': 12000000,
                 }
 
-
 # 表id上界
 dict_pedias_upperbound = {
                 'zhwiki': 991389,
@@ -87,27 +86,32 @@ dict_pedias_upperbound = {
                 'baidubaike_13': 13000001,
                 }
 
-num_of_subjects = dict_pedias[base]
+num_of_subjects = dict_pedias[pedia]
 
-
+# 数据库主机地址
+__HOST = "10.10.10.234"
 # agraph
-repository_agraph = base
-# host_agraph = "192.168.2.234"
-host_agraph = "localhost"
-port_agraph = 10035
-user_agraph = 'john'
-password_agraph = '123'
+para_agraph = {
+    "host": __HOST,
+    "user": "john",
+    "password": "123",
+    "port": 10035
+}
+repository_agraph = pedia
+
 
 # db: mysql
-db_mysql = "zhishi"
-# host_mysql = '192.168.2.234'
-host_mysql = 'localhost'
-port_mysql = 3306
-user_mysql = 'xyk'
-password_mysql = "123"
+para_mysql = {
+    "host": __HOST,
+    "port": 3306,
+    "user": "xyk",
+    "password": "123",
+    "db": "zhishi",
+    "charset": "utf8"
+}
+
 
 table_vd = 'virtual_{base}'.format(base=base)  # 虚拟文档表
 table_nv = 'name_{base}'.format(base=base)  # name vector 表
 table_subject = 'subject_{base}'.format(base=pedia)  # subject表
 table_inverted = 'inverted'  # 倒排索引表
-

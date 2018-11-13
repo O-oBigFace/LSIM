@@ -5,65 +5,36 @@ import re
 from urllib import parse
 import segmentation as seg
 import json
-import serverCONFIG as scg
-from DBUtils import PooledDB
+from server_config import *
+from multiprocessing import Process
+import time
+import warnings
 
+"""
+    本文件可用于构建分块所需的name vector和初始的virtual document
+"""
+
+warnings.filterwarnings('ignore')
 
 weight_of_subject = 3.1
 weight_of_category = 2.1
 
 # connect to Allegrograph
-server = AllegroGraphServer(host=scg.host_agraph,
-                            port=scg.port_agraph,
-                            user=scg.user_agraph,
-                            password=scg.password_agraph)
+server = AllegroGraphServer(**para_agraph)
 catalog = server.openCatalog("")
-graph = catalog.getRepository(scg.repository_agraph, Repository.ACCESS)
+graph = catalog.getRepository(repository_agraph, Repository.ACCESS)
 graph.initialize()
 conn_graph = graph.getConnection()
-
-# connect to mysql
-db_config = {
-            'host': scg.host_mysql,
-            'port': scg.port_mysql,
-            'user': scg.user_mysql,
-            'password': scg.password_mysql,
-            'db': scg.db_mysql,
-            'charset': 'utf8'
-            }
-# pool_db = PooledDB.PooledDB(pymysql, mincached=2, maxcached=6, blocking=True, **db_config)
-
-
-def db_execute(cursor, sql, values):
-    try:
-        cursor.execute(sql, values)
-    except pymysql.err.IntegrityError:
-        pass
-    except pymysql.err.DataError:
-        pass
-    except pymysql.err.InternalError:
-        pass
-
-
-def db_executemany(cursor, sql, values):
-    try:
-        cursor.executemany(sql, values)
-    except pymysql.err.IntegrityError:
-        pass
-    except pymysql.err.DataError:
-        pass
-    except pymysql.err.InternalError:
-        pass
 
 
 # 注意: 表插入操作过于频繁!!!!
 def construct(id_lowerbound, id_upperbound, batch=1500):
-    id_upperbound = min(id_upperbound, scg.dict_pedias_upperbound[scg.base])
+    id_upperbound = min(id_upperbound, dict_pedias_upperbound[base])
     print("construct: ", id_lowerbound, "~", id_upperbound)
     # connect to mysql
     # 获得数据库连接
     # conn_db = pool_db.connection()
-    conn_db = pymysql.connect(**db_config)
+    conn_db = pymysql.connect(**para_mysql)
     cursor = conn_db.cursor()
 
     """
@@ -81,19 +52,19 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
         从subjuect表中查找id, sbj
         '''
         sql_find_subject = ("select id, sbj from `{tb_sbj}` where `id` >= {lb} and `id` < {ub}"
-                            .format(tb_sbj=scg.table_subject,
+                            .format(tb_sbj=table_subject,
                                     lb=id_lowerbound,
                                     ub=min(id_lowerbound + batch, id_upperbound)))
 
         ''' 向数据表nv_插入名称向量 '''
 
         sql_insert_nv = ("""insert ignore into `{table}` (`id`, `sbj`, `nv`) VALUES (%s, %s, %s) """
-                         .format(table=scg.table_nv))
+                         .format(table=table_nv))
 
         ''' 向数据表 vd_zhwiki 中插入虚拟文档 '''
 
         sql_insert_vd = ("""insert ignore into `{table}` (`id`, `sbj`, `vd`) VALUES (%s, %s, %s) """
-                         .format(table=scg.table_vd))
+                         .format(table=table_vd))
 
         # mysql查找
         cursor.execute(sql_find_subject)
@@ -181,7 +152,21 @@ def construct(id_lowerbound, id_upperbound, batch=1500):
     # conn_db.close()
 
 
+def multi_run(function_name, num_of_process):
+    total = num_of_subjects
+    quarter = int(total / num_of_process) + 1
+    no_begin = begin_index
+    arglist = [(quarter * i + no_begin, quarter * (i + 1) + no_begin) for i in range(10)]
+    print(arglist)
+    """num 进程"""
+    for i in range(1, num_of_process + 1):
+        p = Process(target=function_name, args=arglist[i-1])
+        p.start()
+        time.sleep(30)
 
+
+if __name__ == '__main__':
+    multi_run(construct, 4)
 
 
 
